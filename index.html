@@ -1,21 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MarketMind India</title>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-</head>
-<body>
-  <div id="root"></div>
-  <script type="text/babel">
-    const { useState, useRef } = React;
-const API_KEY = "YOUR_GEMINI_API_KEY"; // ⚠️ REPLACE WITH YOUR ACTUAL API KEY
-const MODEL = "gemini-2.5-flash"; // You can use gemini-2.5-flash or gemini-2.0-flash
 
-const SYS = `You are an expert Indian stock market analyst specializing in NSE/BSE swing trading.
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarketMind India</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useRef } = React;
+        const API_KEY = "AIzaSyAZpXB-Ts879-1105arxrxuPwXWdcWS62k"; // ⚠️ REPLACE WITH YOUR ACTUAL API KEY
+        const MODEL = "gemini-2.5-flash"; // You can use gemini-2.5-flash or gemini-2.0-flash
+
+        const SYS = `You are an expert Indian stock market analyst specializing in NSE/BSE swing trading.
 Always use web search to get real-time data before answering. Provide:
 - Current price, trend, and volume data
 - Technical analysis: RSI, MACD, Bollinger Bands, key support/resistance levels, moving averages
@@ -25,188 +27,210 @@ Always use web search to get real-time data before answering. Provide:
 Use markdown with ## headers, **bold** for key numbers, and bullet points. Keep responses concise and actionable.
 End with a one-line disclaimer: "⚠️ Educational analysis only — not SEBI-registered investment advice."`;
 
-async function gemini(userPrompt) {
-try {
-const res = await
-fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`, {
-method: "POST",
-headers: { "Content-Type": "application/json" },
-body: JSON.stringify({
-systemInstruction: { parts: [{ text: SYS }] },
-contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-tools: [{ googleSearch: {} }],
-generationConfig: { maxOutputTokens: 1000 }
-}),
-});
-const d = await res.json();
-if (d.error) return "⚠️ API Error: " + d.error.message;
-return d.candidates?.[0]?.content?.parts?.[0]?.text || "No response received.";
-} catch (e) { return "⚠️ Network error: " + e.message; }
-}
+        async function gemini(userPrompt) {
+            try {
+                const res = await
+                    fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            systemInstruction: { parts: [{ text: SYS }] },
+                            contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+                            tools: [{ googleSearch: {} }],
+                            generationConfig: { maxOutputTokens: 1000 }
+                        }),
+                    });
+                const d = await res.json();
+                if (d.error) return "⚠️ API Error: " + d.error.message;
+                return d.candidates?.[0]?.content?.parts?.[0]?.text || "No response received.";
+            } catch (e) { return "⚠️ Network error: " + e.message; }
+        }
 
-function MD({ text }) {
-const lines = text.split("\n");
-return (
-<div style={{ fontSize: 13, lineHeight: 1.75, color: "#1e293b" }}>
-    {lines.map((line, i) => {
-    if (line.startsWith("## ")) return <div key={i} style={{ fontWeight: 700, fontSize: 15, color: "#1e293b" ,
-        margin: "14px 0 4px" }}>{line.slice(3)}</div>;
-    if (line.startsWith("### ")) return <div key={i} style={{ fontWeight: 700, fontSize: 13, color: "#374151" ,
-        margin: "10px 0 2px" }}>{line.slice(4)}</div>;
-    if (line.startsWith("# ")) return <div key={i} style={{ fontWeight: 800, fontSize: 17, color: "#1e293b" ,
-        margin: "16px 0 6px" }}>{line.slice(2)}</div>;
-    if (line.startsWith("- ") || line.startsWith("* ")) {
-    const content = line.slice(2).replace(/\*\*(.+?)\*\*/g, "⬛$1⬛");
-    return <div key={i} style={{ paddingLeft: 16, margin: "2px 0" }}>• {renderInline(line.slice(2))}</div>;
-    }
-    if (line.startsWith("⚠️")) return <div key={i} style={{ background: "#fef3c7" , color: "#92400e" ,
-        padding: "8px 12px" , borderRadius: 8, fontSize: 12, marginTop: 12 }}>{line}</div>;
-    if (line.trim() === "") return
-    <div key={i} style={{ height: 4 }} />;
-    return <div key={i}>{renderInline(line)}</div>;
-    })}
-</div>
-);
-}
+        function MD({ text }) {
+            const lines = text.split("\n");
+            return (
+                <div style={{ fontSize: 13, lineHeight: 1.75, color: "#1e293b" }}>
+                    {lines.map((line, i) => {
+                        if (line.startsWith("## ")) return <div key={i} style={{
+                            fontWeight: 700, fontSize: 15, color: "#1e293b",
+                            margin: "14px 0 4px"
+                        }}>{line.slice(3)}</div>;
+                        if (line.startsWith("### ")) return <div key={i} style={{
+                            fontWeight: 700, fontSize: 13, color: "#374151",
+                            margin: "10px 0 2px"
+                        }}>{line.slice(4)}</div>;
+                        if (line.startsWith("# ")) return <div key={i} style={{
+                            fontWeight: 800, fontSize: 17, color: "#1e293b",
+                            margin: "16px 0 6px"
+                        }}>{line.slice(2)}</div>;
+                        if (line.startsWith("- ") || line.startsWith("* ")) {
+                            const content = line.slice(2).replace(/\*\*(.+?)\*\*/g, "⬛$1⬛");
+                            return <div key={i} style={{ paddingLeft: 16, margin: "2px 0" }}>• {renderInline(line.slice(2))}</div>;
+                        }
+                        if (line.startsWith("⚠️")) return <div key={i} style={{
+                            background: "#fef3c7", color: "#92400e",
+                            padding: "8px 12px", borderRadius: 8, fontSize: 12, marginTop: 12
+                        }}>{line}</div>;
+                        if (line.trim() === "") return
+                        <div key={i} style={{ height: 4 }} />;
+                        return <div key={i}>{renderInline(line)}</div>;
+                    })}
+                </div>
+            );
+        }
 
-function renderInline(text) {
-const parts = text.split(/(\*\*[^*]+\*\*)/g);
-return parts.map((p, i) =>
-p.startsWith("**") && p.endsWith("**")
-? <strong key={i} style={{ color: "#111" }}>{p.slice(2, -2)}</strong>
-: p
-);
-}
+        function renderInline(text) {
+            const parts = text.split(/(\*\*[^*]+\*\*)/g);
+            return parts.map((p, i) =>
+                p.startsWith("**") && p.endsWith("**")
+                    ? <strong key={i} style={{ color: "#111" }}>{p.slice(2, -2)}</strong>
+                    : p
+            );
+        }
 
-const COLORS = {
-indigo: "#6366f1", green: "#16a34a", red: "#dc2626",
-slate: "#64748b", light: "#f8fafc", border: "#e2e8f0"
-};
+        const COLORS = {
+            indigo: "#6366f1", green: "#16a34a", red: "#dc2626",
+            slate: "#64748b", light: "#f8fafc", border: "#e2e8f0"
+        };
 
-const css = {
-card: { background: "#fff", borderRadius: 14, border: `1px solid ${COLORS.border}`, padding: 20, marginBottom: 16 },
-btn: (bg = COLORS.indigo, sm) => ({
-background: bg, color: "#fff", border: "none", borderRadius: 8,
-padding: sm ? "6px 12px" : "9px 16px", fontSize: sm ? 12 : 13,
-fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap"
-}),
-outBtn: { background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "9px 14px", fontSize: 13,
-cursor: "pointer", color: COLORS.slate },
-inp: { border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none", width:
-"100%", background: "#fff" },
-label: { fontSize: 11, fontWeight: 700, color: COLORS.slate, marginBottom: 4, textTransform: "uppercase", letterSpacing:
-0.5 },
-chip: (bg, color) => ({ background: bg, color, fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
-display: "inline-block" }),
-spin: { display: "inline-block", width: 14, height: 14, border: "2px solid #e2e8f0", borderTop: `2px solid
-${COLORS.indigo}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" },
-};
+        const css = {
+            card: { background: "#fff", borderRadius: 14, border: `1px solid ${COLORS.border}`, padding: 20, marginBottom: 16 },
+            btn: (bg = COLORS.indigo, sm) => ({
+                background: bg, color: "#fff", border: "none", borderRadius: 8,
+                padding: sm ? "6px 12px" : "9px 16px", fontSize: sm ? 12 : 13,
+                fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap"
+            }),
+            outBtn: {
+                background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "9px 14px", fontSize: 13,
+                cursor: "pointer", color: COLORS.slate
+            },
+            inp: {
+                border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none", width:
+                    "100%", background: "#fff"
+            },
+            label: {
+                fontSize: 11, fontWeight: 700, color: COLORS.slate, marginBottom: 4, textTransform: "uppercase", letterSpacing:
+                    0.5
+            },
+            chip: (bg, color) => ({
+                background: bg, color, fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
+                display: "inline-block"
+            }),
+            spin: {
+                display: "inline-block", width: 14, height: 14, border: "2px solid #e2e8f0", borderTop: `2px solid
+${COLORS.indigo}`, borderRadius: "50%", animation: "spin 0.8s linear infinite"
+            },
+        };
 
-const TABS = [["portfolio","💼","Portfolio"],["analyst","🤖","AI
+        const TABS = [["portfolio", "💼", "Portfolio"], ["analyst", "🤖", "AI
 Analyst"],["analyzer","🔍","Analyzer"],["pulse","📊","Market Pulse"],["tips","💡","Trade Tips"]];
 
 const SAMPLE = [
-{ id: 1, sym: "RELIANCE", name: "Reliance Industries", qty: 10, buy: 2850 },
-{ id: 2, sym: "TCS", name: "Tata Consultancy Services", qty: 5, buy: 3920 },
-{ id: 3, sym: "HDFCBANK", name: "HDFC Bank", qty: 15, buy: 1680 },
-];
+            { id: 1, sym: "RELIANCE", name: "Reliance Industries", qty: 10, buy: 2850 },
+            { id: 2, sym: "TCS", name: "Tata Consultancy Services", qty: 5, buy: 3920 },
+            { id: 3, sym: "HDFCBANK", name: "HDFC Bank", qty: 15, buy: 1680 },
+        ];
 
-function App() {
-const [tab, setTab] = useState("portfolio");
-const [stocks, setStocks] = useState(SAMPLE);
-const [form, setForm] = useState({ sym: "", name: "", qty: "", buy: "" });
-const [showAdd, setShowAdd] = useState(false);
-const [msgs, setMsgs] = useState([{ role: "ai", text: "👋 Namaste! I'm your Indian market AI analyst. Ask me anything
-about NSE/BSE stocks, swing trades, or your portfolio. I'll search for live data before answering!" }]);
+        function App() {
+            const [tab, setTab] = useState("portfolio");
+            const [stocks, setStocks] = useState(SAMPLE);
+            const [form, setForm] = useState({ sym: "", name: "", qty: "", buy: "" });
+            const [showAdd, setShowAdd] = useState(false);
+            const [msgs, setMsgs] = useState([{
+                role: "ai", text: "👋 Namaste! I'm your Indian market AI analyst. Ask me anything
+about NSE/ BSE stocks, swing trades, or your portfolio.I'll search for live data before answering!" }]);
 const [chatIn, setChatIn] = useState("");
-const [busy, setBusy] = useState({ chat: false, stock: false, pulse: false, tips: false });
-const [stockQ, setStockQ] = useState("");
-const [stockRes, setStockRes] = useState("");
-const [pulse, setPulse] = useState("");
-const [tips, setTips] = useState("");
-const msgEnd = useRef(null);
+            const [busy, setBusy] = useState({ chat: false, stock: false, pulse: false, tips: false });
+            const [stockQ, setStockQ] = useState("");
+            const [stockRes, setStockRes] = useState("");
+            const [pulse, setPulse] = useState("");
+            const [tips, setTips] = useState("");
+            const msgEnd = useRef(null);
 
-const portfolio = stocks.map(s => `${s.sym} (${s.name}): ${s.qty} shares @ ₹${s.buy}`).join("; ");
-const totalInvested = stocks.reduce((s, st) => s + st.qty * st.buy, 0);
-const today = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+            const portfolio = stocks.map(s => `${s.sym} (${s.name}): ${s.qty} shares @ ₹${s.buy}`).join("; ");
+            const totalInvested = stocks.reduce((s, st) => s + st.qty * st.buy, 0);
+            const today = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
 
-const setBusy2 = (k, v) => setBusy(b => ({ ...b, [k]: v }));
+            const setBusy2 = (k, v) => setBusy(b => ({ ...b, [k]: v }));
 
-const sendChat = async () => {
-if (!chatIn.trim() || busy.chat) return;
-const q = chatIn.trim(); setChatIn("");
-const history = msgs.slice(-6).map(m => `${m.role === "user" ? "User" : "AI"}: ${m.text}`).join("\n");
-setMsgs(p => [...p, { role: "user", text: q }]);
-setBusy2("chat", true);
-const prompt = `Date: ${today}. User's portfolio: ${portfolio}.\n\nConversation so far:\n${history}\n\nNew question:
+            const sendChat = async () => {
+                if (!chatIn.trim() || busy.chat) return;
+                const q = chatIn.trim(); setChatIn("");
+                const history = msgs.slice(-6).map(m => `${m.role === "user" ? "User" : "AI"}: ${m.text}`).join("\n");
+                setMsgs(p => [...p, { role: "user", text: q }]);
+                setBusy2("chat", true);
+                const prompt = `Date: ${today}. User's portfolio: ${portfolio}.\n\nConversation so far:\n${history}\n\nNew question:
 ${q}`;
-const reply = await gemini(prompt);
-setMsgs(p => [...p, { role: "ai", text: reply }]);
-setBusy2("chat", false);
-setTimeout(() => msgEnd.current?.scrollIntoView({ behavior: "smooth" }), 100);
-};
+                const reply = await gemini(prompt);
+                setMsgs(p => [...p, { role: "ai", text: reply }]);
+                setBusy2("chat", false);
+                setTimeout(() => msgEnd.current?.scrollIntoView({ behavior: "smooth" }), 100);
+            };
 
-const analyzeStock = async () => {
-if (!stockQ.trim() || busy.stock) return;
-setBusy2("stock", true); setStockRes("");
-const res = await gemini(`Analyze ${stockQ.toUpperCase()} (NSE/BSE) for swing trading as of ${today}. Search for current
+            const analyzeStock = async () => {
+                if (!stockQ.trim() || busy.stock) return;
+                setBusy2("stock", true); setStockRes("");
+                const res = await gemini(`Analyze ${stockQ.toUpperCase()} (NSE/BSE) for swing trading as of ${today}. Search for current
 price, technical indicators (RSI, MACD, support/resistance), recent news, FII data, and give a full swing trade report:
 trend, entry zone, target, stop-loss, risk level, and time horizon.`);
-setStockRes(res); setBusy2("stock", false);
-};
+                setStockRes(res); setBusy2("stock", false);
+            };
 
-const loadPulse = async () => {
-setBusy2("pulse", true); setPulse("");
-const res = await gemini(`Indian market pulse for ${today}: Search for 1) Nifty 50 and Sensex current level and % change
+            const loadPulse = async () => {
+                setBusy2("pulse", true); setPulse("");
+                const res = await gemini(`Indian market pulse for ${today}: Search for 1) Nifty 50 and Sensex current level and % change
 2) Top 5 gainers and losers 3) Sector rotation (which sectors are hot/cold) 4) FII & DII activity 5) Key macro events or
 RBI news 6) Overall swing trading outlook for the next 3-5 days.`);
-setPulse(res); setBusy2("pulse", false);
-};
+                setPulse(res); setBusy2("pulse", false);
+            };
 
-const loadTips = async () => {
-setBusy2("tips", true); setTips("");
-const res = await gemini(`My portfolio as of ${today}: ${portfolio}.\n\nSearch live market data and give me: 1)
+            const loadTips = async () => {
+                setBusy2("tips", true); setTips("");
+                const res = await gemini(`My portfolio as of ${today}: ${portfolio}.\n\nSearch live market data and give me: 1)
 Portfolio health check — which holdings are technically strong vs weak 2) Top 3 swing trade opportunities in Indian
 markets right now with entry, target, stop-loss 3) Any urgent alerts for my holdings (stop-loss at risk, target near,
 trend reversal) 4) This week's swing strategy given current Nifty trend. Be specific with numbers.`);
-setTips(res); setBusy2("tips", false);
-};
+                setTips(res); setBusy2("tips", false);
+            };
 
-const addStock = () => {
-if (!form.sym || !form.qty || !form.buy) return;
-setStocks(p => [...p, { id: Date.now(), sym: form.sym.toUpperCase(), name: form.name || form.sym.toUpperCase(), qty:
-+form.qty, buy: +form.buy }]);
-setForm({ sym: "", name: "", qty: "", buy: "" }); setShowAdd(false);
-};
+            const addStock = () => {
+                if (!form.sym || !form.qty || !form.buy) return;
+                setStocks(p => [...p, {
+                    id: Date.now(), sym: form.sym.toUpperCase(), name: form.name || form.sym.toUpperCase(), qty:
+                        +form.qty, buy: +form.buy
+                }]);
+                setForm({ sym: "", name: "", qty: "", buy: "" }); setShowAdd(false);
+            };
 
-const handleCSV = e => {
-const file = e.target.files[0]; if (!file) return;
-const r = new FileReader();
-r.onload = ev => {
-const lines = ev.target.result.split("\n").filter(Boolean).slice(1);
-const parsed = lines.flatMap(line => {
-const c = line.split(",").map(x => x.trim().replace(/"/g, ""));
-const qty = parseFloat(c[2]) || parseFloat(c[3]);
-const buy = parseFloat(c[3]) || parseFloat(c[4]);
-return c[0] && qty && buy ? [{ id: Date.now() + Math.random(), sym: c[0].toUpperCase(), name: c[1] || c[0], qty, buy }]
-: [];
-});
-if (parsed.length) setStocks(p => [...p, ...parsed]);
-else alert("Could not parse CSV. Please ensure it has columns: Symbol, Name, Quantity, Buy Price.");
-};
-r.readAsText(file);
-e.target.value = "";
-};
+            const handleCSV = e => {
+                const file = e.target.files[0]; if (!file) return;
+                const r = new FileReader();
+                r.onload = ev => {
+                    const lines = ev.target.result.split("\n").filter(Boolean).slice(1);
+                    const parsed = lines.flatMap(line => {
+                        const c = line.split(",").map(x => x.trim().replace(/"/g, ""));
+                        const qty = parseFloat(c[2]) || parseFloat(c[3]);
+                        const buy = parseFloat(c[3]) || parseFloat(c[4]);
+                        return c[0] && qty && buy ? [{ id: Date.now() + Math.random(), sym: c[0].toUpperCase(), name: c[1] || c[0], qty, buy }]
+                            : [];
+                    });
+                    if (parsed.length) setStocks(p => [...p, ...parsed]);
+                    else alert("Could not parse CSV. Please ensure it has columns: Symbol, Name, Quantity, Buy Price.");
+                };
+                r.readAsText(file);
+                e.target.value = "";
+            };
 
-const quickMsgs = ["Nifty 50 outlook this week?", "Best swing trade right now?", "Should I hold TCS?", "Analyse my full
+            const quickMsgs = ["Nifty 50 outlook this week?", "Best swing trade right now?", "Should I hold TCS?", "Analyse my full
 portfolio"];
 
 return (
-<div style={{ fontFamily: "'Inter',system-ui,sans-serif" , minHeight: "100vh" , background: "#f1f5f9" , color: "#1e293b"
-    }}>
-    <style>
-        {
-            `@keyframes spin {
+                <div style={{
+                    fontFamily: "'Inter',system-ui,sans-serif", minHeight: "100vh", background: "#f1f5f9", color: "#1e293b"
+                }}>
+                    <style>
+                        {
+                            `@keyframes spin {
                 to {
                     transform: rotate(360deg)
                 }
@@ -226,264 +250,306 @@ return (
             }
 
             `
-        }
-    </style>
+                        }
+                    </style>
 
-    {/* Header */}
-    <div style={{ background: "#fff" , borderBottom: `1px solid ${COLORS.border}`, padding: "0 20px" , display: "flex" ,
-        alignItems: "center" , gap: 16, position: "sticky" , top: 0, zIndex: 10 }}>
-        <div style={{ display: "flex" , alignItems: "center" , gap: 8, padding: "14px 0" , fontWeight: 800, fontSize:
-            16, whiteSpace: "nowrap" }}>
-            <span style={{ fontSize: 22 }}>📈</span>
-            <span>Market<span style={{ color: COLORS.indigo }}>Mind</span> <span style={{ fontSize: 11, fontWeight: 600,
-                    color: "#94a3b8" }}>India</span></span>
-        </div>
-        <div style={{ display: "flex" , gap: 0, overflowX: "auto" }}>
-            {TABS.map(([id, icon, label]) => (
-            <button key={id} onClick={()=> setTab(id)} style={{
-                padding: "16px 14px", fontSize: 13, fontWeight: 500, cursor: "pointer",
-                border: "none", background: "none",
-                color: tab === id ? COLORS.indigo : COLORS.slate,
-                borderBottom: tab === id ? `2px solid ${COLORS.indigo}` : "2px solid transparent",
-                whiteSpace: "nowrap"
-                }}>{icon} {label}</button>
-            ))}
-        </div>
-    </div>
-
-    <div style={{ maxWidth: 880, margin: "0 auto" , padding: "20px 16px" }}>
-
-        {/* PORTFOLIO */}
-        {tab === "portfolio" && <>
-            <div style={{ ...css.card, background: "linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)" , border: "none" ,
-                display: "flex" , gap: 24 }}>
-                <div>
-                    <div style={{ color: "rgba(255,255,255,.7)" , fontSize: 12, fontWeight: 600,
-                        textTransform: "uppercase" , letterSpacing: 0.5 }}>Total Invested</div>
-                    <div style={{ color: "#fff" , fontSize: 30, fontWeight: 800, marginTop: 4 }}>
-                        ₹{totalInvested.toLocaleString("en-IN")}</div>
-                    <div style={{ color: "rgba(255,255,255,.6)" , fontSize: 12, marginTop: 4 }}>{stocks.length} holdings
-                    </div>
-                </div>
-                <div style={{ marginLeft: "auto" , display: "flex" , flexDirection: "column" , alignItems: "flex-end" ,
-                    justifyContent: "center" , gap: 6 }}>
-                    <div style={{ ...css.chip("rgba(255,255,255,.2)", "#fff" ), fontSize: 12 }}>NSE / BSE</div>
-                    <div style={{ color: "rgba(255,255,255,.7)" , fontSize: 11 }}>Swing Trading Portfolio</div>
-                </div>
-            </div>
-
-            <div style={css.card}>
-                <div style={{ display: "flex" , justifyContent: "space-between" , alignItems: "center" , marginBottom:
-                    16 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15 }}>📂 My Holdings</div>
-                    <div style={{ display: "flex" , gap: 8 }}>
-                        <label style={{ ...css.btn("#475569"), display: "inline-flex" , alignItems: "center" , gap: 6,
-                            cursor: "pointer" }}>
-                            📥 Import CSV
-                            <input type="file" accept=".csv" style={{ display: "none" }} onChange={handleCSV} />
-                        </label>
-                        <button style={css.btn()} onClick={()=> setShowAdd(s => !s)}>+ Add Stock</button>
-                    </div>
-                </div>
-
-                {showAdd && (
-                <div style={{ background: "#f8fafc" , borderRadius: 10, padding: 16, marginBottom: 16, border: `1px
-                    solid ${COLORS.border}` }}>
-                    <div style={{ display: "grid" , gridTemplateColumns: "1fr 2fr 1fr 1fr" , gap: 10, marginBottom: 12
+                    {/* Header */}
+                    <div style={{
+                        background: "#fff", borderBottom: `1px solid ${COLORS.border}`, padding: "0 20px", display: "flex",
+                        alignItems: "center", gap: 16, position: "sticky", top: 0, zIndex: 10
+                    }}>
+                        <div style={{
+                            display: "flex", alignItems: "center", gap: 8, padding: "14px 0", fontWeight: 800, fontSize:
+                                16, whiteSpace: "nowrap"
                         }}>
-                        {[["Symbol", "sym", "e.g. RELIANCE"], ["Company Name", "name", "e.g. Reliance Industries"],
-                        ["Quantity", "qty", "10"], ["Buy Price ₹", "buy", "2850"]].map(([lbl, k, ph]) => (
-                        <div key={k}>
-                            <div style={css.label}>{lbl}</div>
-                            <input style={css.inp} placeholder={ph} value={form[k]} onChange={e=> setForm(f => ({ ...f,
-                            [k]: e.target.value }))} onKeyDown={e => e.key === "Enter" && addStock()} />
+                            <span style={{ fontSize: 22 }}>📈</span>
+                            <span>Market<span style={{ color: COLORS.indigo }}>Mind</span> <span style={{
+                                fontSize: 11, fontWeight: 600,
+                                color: "#94a3b8"
+                            }}>India</span></span>
                         </div>
-                        ))}
-                    </div>
-                    <div style={{ display: "flex" , gap: 8 }}>
-                        <button style={css.btn()} onClick={addStock}>Add to Portfolio</button>
-                        <button style={css.outBtn} onClick={()=> setShowAdd(false)}>Cancel</button>
-                    </div>
-                </div>
-                )}
-
-                {stocks.length === 0
-                ? <div style={{ textAlign: "center" , padding: 48, color: "#94a3b8" }}>
-                    <div style={{ fontSize: 36 }}>📭</div>
-                    <div style={{ marginTop: 10 }}>No holdings yet. Add stocks or import your Groww CSV.</div>
-                </div>
-                : <table style={{ width: "100%" , borderCollapse: "collapse" }}>
-                    <thead>
-                        <tr>{["Symbol", "Company", "Qty", "Buy Price", "Invested", ""].map(h => (
-                            <th key={h} style={{ textAlign: "left" , fontSize: 11, fontWeight: 700, color: COLORS.slate,
-                                padding: "6px 10px" , textTransform: "uppercase" , letterSpacing: 0.3 }}>{h}</th>
+                        <div style={{ display: "flex", gap: 0, overflowX: "auto" }}>
+                            {TABS.map(([id, icon, label]) => (
+                                <button key={id} onClick={() => setTab(id)} style={{
+                                    padding: "16px 14px", fontSize: 13, fontWeight: 500, cursor: "pointer",
+                                    border: "none", background: "none",
+                                    color: tab === id ? COLORS.indigo : COLORS.slate,
+                                    borderBottom: tab === id ? `2px solid ${COLORS.indigo}` : "2px solid transparent",
+                                    whiteSpace: "nowrap"
+                                }}>{icon} {label}</button>
                             ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {stocks.map(s => (
-                        <tr key={s.id} style={{ borderTop: `1px solid #f1f5f9` }}>
-                            <td style={{ padding: "13px 10px" }}><span style={css.chip("#ede9fe", "#6d28d9"
-                                    )}>{s.sym}</span></td>
-                            <td style={{ padding: "13px 10px" , fontSize: 13, color: "#374151" }}>{s.name}</td>
-                            <td style={{ padding: "13px 10px" , fontSize: 13 }}>{s.qty}</td>
-                            <td style={{ padding: "13px 10px" , fontSize: 13 }}>₹{s.buy.toLocaleString("en-IN")}</td>
-                            <td style={{ padding: "13px 10px" , fontSize: 13, fontWeight: 700 }}>₹{(s.qty *
-                                s.buy).toLocaleString("en-IN")}</td>
-                            <td style={{ padding: "13px 10px" }}>
-                                <button onClick={()=> setStocks(p => p.filter(x => x.id !== s.id))} style={{ background:
-                                    "none", border: "none", cursor: "pointer", fontSize: 16, color: "#ef4444"
-                                    }}>🗑️</button>
-                            </td>
-                        </tr>
-                        ))}
-                    </tbody>
-                </table>
-                }
+                        </div>
+                    </div>
 
-                <div style={{ marginTop: 14, padding: "10px 14px" , background: "#f0fdf4" , borderRadius: 8, fontSize:
-                    12, color: "#166534" }}>
-                    💡 <strong>Tip:</strong> Export your P&L from Groww → Profile → Reports → download CSV and import it
-                    here.
-                </div>
-            </div>
-        </>}
+                    <div style={{ maxWidth: 880, margin: "0 auto", padding: "20px 16px" }}>
 
-        {/* AI ANALYST */}
-        {tab === "analyst" && (
-        <div style={css.card}>
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14 }}>🤖 AI Market Analyst</div>
-            <div style={{ background: "#f8fafc" , borderRadius: 10, padding: 16, minHeight: 380, maxHeight: 480,
-                overflowY: "auto" , marginBottom: 12 }}>
-                {msgs.map((m, i) => (
-                <div key={i} style={{ marginBottom: 14, display: "flex" , justifyContent: m.role==="user" ? "flex-end"
-                    : "flex-start" }}>
-                    <div style={{ maxWidth: "85%" , background: m.role==="user" ? COLORS.indigo : "#fff" , color:
-                        m.role==="user" ? "#fff" : "#1e293b" , borderRadius: 12, padding: "10px 14px" , border:
-                        m.role==="user" ? "none" : `1px solid ${COLORS.border}`, fontSize: 13 }}>
-                        {m.role === "user" ? m.text :
-                        <MD text={m.text} />}
+                        {/* PORTFOLIO */}
+                        {tab === "portfolio" && <>
+                            <div style={{
+                                ...css.card, background: "linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)", border: "none",
+                                display: "flex", gap: 24
+                            }}>
+                                <div>
+                                    <div style={{
+                                        color: "rgba(255,255,255,.7)", fontSize: 12, fontWeight: 600,
+                                        textTransform: "uppercase", letterSpacing: 0.5
+                                    }}>Total Invested</div>
+                                    <div style={{ color: "#fff", fontSize: 30, fontWeight: 800, marginTop: 4 }}>
+                                        ₹{totalInvested.toLocaleString("en-IN")}</div>
+                                    <div style={{ color: "rgba(255,255,255,.6)", fontSize: 12, marginTop: 4 }}>{stocks.length} holdings
+                                    </div>
+                                </div>
+                                <div style={{
+                                    marginLeft: "auto", display: "flex", flexDirection: "column", alignItems: "flex-end",
+                                    justifyContent: "center", gap: 6
+                                }}>
+                                    <div style={{ ...css.chip("rgba(255,255,255,.2)", "#fff"), fontSize: 12 }}>NSE / BSE</div>
+                                    <div style={{ color: "rgba(255,255,255,.7)", fontSize: 11 }}>Swing Trading Portfolio</div>
+                                </div>
+                            </div>
+
+                            <div style={css.card}>
+                                <div style={{
+                                    display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom:
+                                        16
+                                }}>
+                                    <div style={{ fontWeight: 700, fontSize: 15 }}>📂 My Holdings</div>
+                                    <div style={{ display: "flex", gap: 8 }}>
+                                        <label style={{
+                                            ...css.btn("#475569"), display: "inline-flex", alignItems: "center", gap: 6,
+                                            cursor: "pointer"
+                                        }}>
+                                            📥 Import CSV
+                                            <input type="file" accept=".csv" style={{ display: "none" }} onChange={handleCSV} />
+                                        </label>
+                                        <button style={css.btn()} onClick={() => setShowAdd(s => !s)}>+ Add Stock</button>
+                                    </div>
+                                </div>
+
+                                {showAdd && (
+                                    <div style={{
+                                        background: "#f8fafc", borderRadius: 10, padding: 16, marginBottom: 16, border: `1px
+                    solid ${COLORS.border}`
+                                    }}>
+                                        <div style={{
+                                            display: "grid", gridTemplateColumns: "1fr 2fr 1fr 1fr", gap: 10, marginBottom: 12
+                                        }}>
+                                            {[["Symbol", "sym", "e.g. RELIANCE"], ["Company Name", "name", "e.g. Reliance Industries"],
+                                            ["Quantity", "qty", "10"], ["Buy Price ₹", "buy", "2850"]].map(([lbl, k, ph]) => (
+                                                <div key={k}>
+                                                    <div style={css.label}>{lbl}</div>
+                                                    <input style={css.inp} placeholder={ph} value={form[k]} onChange={e => setForm(f => ({
+                                                        ...f,
+                                                        [k]: e.target.value
+                                                    }))} onKeyDown={e => e.key === "Enter" && addStock()} />
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div style={{ display: "flex", gap: 8 }}>
+                                            <button style={css.btn()} onClick={addStock}>Add to Portfolio</button>
+                                            <button style={css.outBtn} onClick={() => setShowAdd(false)}>Cancel</button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {stocks.length === 0
+                                    ? <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
+                                        <div style={{ fontSize: 36 }}>📭</div>
+                                        <div style={{ marginTop: 10 }}>No holdings yet. Add stocks or import your Groww CSV.</div>
+                                    </div>
+                                    : <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                        <thead>
+                                            <tr>{["Symbol", "Company", "Qty", "Buy Price", "Invested", ""].map(h => (
+                                                <th key={h} style={{
+                                                    textAlign: "left", fontSize: 11, fontWeight: 700, color: COLORS.slate,
+                                                    padding: "6px 10px", textTransform: "uppercase", letterSpacing: 0.3
+                                                }}>{h}</th>
+                                            ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {stocks.map(s => (
+                                                <tr key={s.id} style={{ borderTop: `1px solid #f1f5f9` }}>
+                                                    <td style={{ padding: "13px 10px" }}><span style={css.chip("#ede9fe", "#6d28d9"
+                                                    )}>{s.sym}</span></td>
+                                                    <td style={{ padding: "13px 10px", fontSize: 13, color: "#374151" }}>{s.name}</td>
+                                                    <td style={{ padding: "13px 10px", fontSize: 13 }}>{s.qty}</td>
+                                                    <td style={{ padding: "13px 10px", fontSize: 13 }}>₹{s.buy.toLocaleString("en-IN")}</td>
+                                                    <td style={{ padding: "13px 10px", fontSize: 13, fontWeight: 700 }}>₹{(s.qty *
+                                                        s.buy).toLocaleString("en-IN")}</td>
+                                                    <td style={{ padding: "13px 10px" }}>
+                                                        <button onClick={() => setStocks(p => p.filter(x => x.id !== s.id))} style={{
+                                                            background:
+                                                                "none", border: "none", cursor: "pointer", fontSize: 16, color: "#ef4444"
+                                                        }}>🗑️</button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                }
+
+                                <div style={{
+                                    marginTop: 14, padding: "10px 14px", background: "#f0fdf4", borderRadius: 8, fontSize:
+                                        12, color: "#166534"
+                                }}>
+                                    💡 <strong>Tip:</strong> Export your P&L from Groww → Profile → Reports → download CSV and import it
+                                    here.
+                                </div>
+                            </div>
+                        </>}
+
+                        {/* AI ANALYST */}
+                        {tab === "analyst" && (
+                            <div style={css.card}>
+                                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14 }}>🤖 AI Market Analyst</div>
+                                <div style={{
+                                    background: "#f8fafc", borderRadius: 10, padding: 16, minHeight: 380, maxHeight: 480,
+                                    overflowY: "auto", marginBottom: 12
+                                }}>
+                                    {msgs.map((m, i) => (
+                                        <div key={i} style={{
+                                            marginBottom: 14, display: "flex", justifyContent: m.role === "user" ? "flex-end"
+                                                : "flex-start"
+                                        }}>
+                                            <div style={{
+                                                maxWidth: "85%", background: m.role === "user" ? COLORS.indigo : "#fff", color:
+                                                    m.role === "user" ? "#fff" : "#1e293b", borderRadius: 12, padding: "10px 14px", border:
+                                                    m.role === "user" ? "none" : `1px solid ${COLORS.border}`, fontSize: 13
+                                            }}>
+                                                {m.role === "user" ? m.text :
+                                                    <MD text={m.text} />}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {busy.chat && <div style={{
+                                        display: "flex", alignItems: "center", gap: 8, color: COLORS.slate,
+                                        fontSize: 13
+                                    }}>
+                                        <div style={css.spin} /> Searching live market data…
+                                    </div>}
+                                    <div ref={msgEnd} />
+                                </div>
+                                <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                                    <input style={{ ...css.inp, flex: 1 }} placeholder="Ask about any stock, trend, or your portfolio…"
+                                        value={chatIn} onChange={e => setChatIn(e.target.value)} onKeyDown={e => e.key === "Enter" &&
+                                            sendChat()} />
+                                    <button style={css.btn(COLORS.indigo)} onClick={sendChat} disabled={busy.chat}>Send ↵</button>
+                                </div>
+                                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                    {quickMsgs.map(q => (
+                                        <button key={q} onClick={() => setChatIn(q)} style={{
+                                            background: "#f1f5f9", border: "none",
+                                            borderRadius: 20, padding: "5px 12px", fontSize: 12, cursor: "pointer", color: "#475569"
+                                        }}>{q}</button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* STOCK ANALYZER */}
+                        {tab === "analyzer" && <>
+                            <div style={css.card}>
+                                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14 }}>🔍 Swing Trade Stock Analyzer</div>
+                                <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                                    <input style={{ ...css.inp, flex: 1 }}
+                                        placeholder="Enter NSE/BSE symbol (e.g. TATAMOTORS, INFY, WIPRO)…" value={stockQ} onChange={e =>
+                                            setStockQ(e.target.value)} onKeyDown={e => e.key === "Enter" && analyzeStock()} />
+                                    <button style={css.btn()} onClick={analyzeStock} disabled={busy.stock}>{busy.stock ? "Analyzing…" :
+                                        "Analyze"}</button>
+                                </div>
+                                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                    {["RELIANCE", "TCS", "INFY", "HDFCBANK", "TATAMOTORS", "AXISBANK", "WIPRO", "ICICIBANK"].map(sym =>
+                                    (
+                                        <button key={sym} onClick={() => setStockQ(sym)} style={{
+                                            background: "#f1f5f9", border: "none",
+                                            borderRadius: 6, padding: "5px 10px", fontSize: 12, cursor: "pointer", color: "#475569",
+                                            fontWeight: 500
+                                        }}>{sym}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            {busy.stock && (
+                                <div style={{ ...css.card, textAlign: "center", padding: 48 }}>
+                                    <div style={{ fontSize: 36 }}>🔄</div>
+                                    <div style={{ marginTop: 10, fontWeight: 600 }}>Fetching live data for {stockQ.toUpperCase()}…</div>
+                                    <div style={{ color: COLORS.slate, fontSize: 12, marginTop: 4 }}>Searching news, technicals &
+                                        fundamentals</div>
+                                </div>
+                            )}
+                            {stockRes && !busy.stock && <div style={css.card}>
+                                <MD text={stockRes} />
+                            </div>}
+                        </>}
+
+                        {/* MARKET PULSE */}
+                        {tab === "pulse" && (
+                            <div style={css.card}>
+                                <div style={{
+                                    display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14
+                                }}>
+                                    <div style={{ fontWeight: 700, fontSize: 15 }}>📊 Indian Market Pulse — {today}</div>
+                                    <button style={css.btn()} onClick={loadPulse} disabled={busy.pulse}>{busy.pulse ? "Loading…" : "🔄
+                    Refresh"}</button>
+                                </div>
+                                {!pulse && !busy.pulse && (
+                                    <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
+                                        <div style={{ fontSize: 36 }}>🌐</div>
+                                        <div style={{ marginTop: 10 }}>Click Refresh to fetch today's live market overview</div>
+                                        <div style={{ fontSize: 12, marginTop: 6 }}>Nifty, Sensex, gainers, losers, sector trends & FII data
+                                        </div>
+                                    </div>
+                                )}
+                                {busy.pulse && <div style={{ textAlign: "center", padding: 48, color: COLORS.slate }}>
+                                    <div style={{ fontSize: 36 }}>📡</div>
+                                    <div style={{ marginTop: 10 }}>Fetching live market data…</div>
+                                </div>}
+                                {pulse &&
+                                    <MD text={pulse} />}
+                            </div>
+                        )}
+
+                        {/* TRADE TIPS */}
+                        {tab === "tips" && (
+                            <div style={css.card}>
+                                <div style={{
+                                    display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12
+                                }}>
+                                    <div style={{ fontWeight: 700, fontSize: 15 }}>💡 AI Trade Tips & Portfolio Alerts</div>
+                                    <button style={css.btn(COLORS.green)} onClick={loadTips} disabled={busy.tips}>{busy.tips ? "Analyzing…"
+                                        : "✨ Get Tips"}</button>
+                                </div>
+                                <div style={{
+                                    background: "#f0fdf4", borderRadius: 8, padding: 12, fontSize: 13, color: "#166534",
+                                    marginBottom: 14
+                                }}>
+                                    🎯 AI will analyze your <strong>{stocks.length} holdings</strong> + live market to give actionable swing
+                                    trade tips with entry, target & stop-loss.
+                                </div>
+                                {!tips && !busy.tips && (
+                                    <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
+                                        <div style={{ fontSize: 36 }}>🤖</div>
+                                        <div style={{ marginTop: 10 }}>Click "Get Tips" to receive personalised swing trade recommendations
+                                        </div>
+                                    </div>
+                                )}
+                                {busy.tips && <div style={{ textAlign: "center", padding: 48, color: COLORS.slate }}>
+                                    <div style={{ fontSize: 36 }}>🧠</div>
+                                    <div style={{ marginTop: 10 }}>Analyzing your portfolio + live market conditions…</div>
+                                </div>}
+                                {tips &&
+                                    <MD text={tips} />}
+                            </div>
+                        )}
+
                     </div>
                 </div>
-                ))}
-                {busy.chat && <div style={{ display: "flex" , alignItems: "center" , gap: 8, color: COLORS.slate,
-                    fontSize: 13 }}>
-                    <div style={css.spin} /> Searching live market data…
-                </div>}
-                <div ref={msgEnd} />
-            </div>
-            <div style={{ display: "flex" , gap: 8, marginBottom: 10 }}>
-                <input style={{ ...css.inp, flex: 1 }} placeholder="Ask about any stock, trend, or your portfolio…"
-                    value={chatIn} onChange={e=> setChatIn(e.target.value)} onKeyDown={e => e.key === "Enter" &&
-                sendChat()} />
-                <button style={css.btn(COLORS.indigo)} onClick={sendChat} disabled={busy.chat}>Send ↵</button>
-            </div>
-            <div style={{ display: "flex" , gap: 6, flexWrap: "wrap" }}>
-                {quickMsgs.map(q => (
-                <button key={q} onClick={()=> setChatIn(q)} style={{ background: "#f1f5f9", border: "none",
-                    borderRadius: 20, padding: "5px 12px", fontSize: 12, cursor: "pointer", color: "#475569"
-                    }}>{q}</button>
-                ))}
-            </div>
-        </div>
-        )}
+            );
+        }
 
-        {/* STOCK ANALYZER */}
-        {tab === "analyzer" && <>
-            <div style={css.card}>
-                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14 }}>🔍 Swing Trade Stock Analyzer</div>
-                <div style={{ display: "flex" , gap: 8, marginBottom: 10 }}>
-                    <input style={{ ...css.inp, flex: 1 }}
-                        placeholder="Enter NSE/BSE symbol (e.g. TATAMOTORS, INFY, WIPRO)…" value={stockQ} onChange={e=>
-                    setStockQ(e.target.value)} onKeyDown={e => e.key === "Enter" && analyzeStock()} />
-                    <button style={css.btn()} onClick={analyzeStock} disabled={busy.stock}>{busy.stock ? "Analyzing…" :
-                        "Analyze"}</button>
-                </div>
-                <div style={{ display: "flex" , gap: 6, flexWrap: "wrap" }}>
-                    {["RELIANCE", "TCS", "INFY", "HDFCBANK", "TATAMOTORS", "AXISBANK", "WIPRO", "ICICIBANK"].map(sym =>
-                    (
-                    <button key={sym} onClick={()=> setStockQ(sym)} style={{ background: "#f1f5f9", border: "none",
-                        borderRadius: 6, padding: "5px 10px", fontSize: 12, cursor: "pointer", color: "#475569",
-                        fontWeight: 500 }}>{sym}</button>
-                    ))}
-                </div>
-            </div>
-            {busy.stock && (
-            <div style={{ ...css.card, textAlign: "center" , padding: 48 }}>
-                <div style={{ fontSize: 36 }}>🔄</div>
-                <div style={{ marginTop: 10, fontWeight: 600 }}>Fetching live data for {stockQ.toUpperCase()}…</div>
-                <div style={{ color: COLORS.slate, fontSize: 12, marginTop: 4 }}>Searching news, technicals &
-                    fundamentals</div>
-            </div>
-            )}
-            {stockRes && !busy.stock && <div style={css.card}>
-                <MD text={stockRes} />
-            </div>}
-        </>}
-
-        {/* MARKET PULSE */}
-        {tab === "pulse" && (
-        <div style={css.card}>
-            <div style={{ display: "flex" , justifyContent: "space-between" , alignItems: "center" , marginBottom: 14
-                }}>
-                <div style={{ fontWeight: 700, fontSize: 15 }}>📊 Indian Market Pulse — {today}</div>
-                <button style={css.btn()} onClick={loadPulse} disabled={busy.pulse}>{busy.pulse ? "Loading…" : "🔄
-                    Refresh"}</button>
-            </div>
-            {!pulse && !busy.pulse && (
-            <div style={{ textAlign: "center" , padding: 48, color: "#94a3b8" }}>
-                <div style={{ fontSize: 36 }}>🌐</div>
-                <div style={{ marginTop: 10 }}>Click Refresh to fetch today's live market overview</div>
-                <div style={{ fontSize: 12, marginTop: 6 }}>Nifty, Sensex, gainers, losers, sector trends & FII data
-                </div>
-            </div>
-            )}
-            {busy.pulse && <div style={{ textAlign: "center" , padding: 48, color: COLORS.slate }}>
-                <div style={{ fontSize: 36 }}>📡</div>
-                <div style={{ marginTop: 10 }}>Fetching live market data…</div>
-            </div>}
-            {pulse &&
-            <MD text={pulse} />}
-        </div>
-        )}
-
-        {/* TRADE TIPS */}
-        {tab === "tips" && (
-        <div style={css.card}>
-            <div style={{ display: "flex" , justifyContent: "space-between" , alignItems: "center" , marginBottom: 12
-                }}>
-                <div style={{ fontWeight: 700, fontSize: 15 }}>💡 AI Trade Tips & Portfolio Alerts</div>
-                <button style={css.btn(COLORS.green)} onClick={loadTips} disabled={busy.tips}>{busy.tips ? "Analyzing…"
-                    : "✨ Get Tips"}</button>
-            </div>
-            <div style={{ background: "#f0fdf4" , borderRadius: 8, padding: 12, fontSize: 13, color: "#166534" ,
-                marginBottom: 14 }}>
-                🎯 AI will analyze your <strong>{stocks.length} holdings</strong> + live market to give actionable swing
-                trade tips with entry, target & stop-loss.
-            </div>
-            {!tips && !busy.tips && (
-            <div style={{ textAlign: "center" , padding: 48, color: "#94a3b8" }}>
-                <div style={{ fontSize: 36 }}>🤖</div>
-                <div style={{ marginTop: 10 }}>Click "Get Tips" to receive personalised swing trade recommendations
-                </div>
-            </div>
-            )}
-            {busy.tips && <div style={{ textAlign: "center" , padding: 48, color: COLORS.slate }}>
-                <div style={{ fontSize: 36 }}>🧠</div>
-                <div style={{ marginTop: 10 }}>Analyzing your portfolio + live market conditions…</div>
-            </div>}
-            {tips &&
-            <MD text={tips} />}
-        </div>
-        )}
-
-    </div>
-</div>
-);
-}
-
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
-  </script>
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
+
 </html>
