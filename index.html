@@ -45,7 +45,8 @@
 
         input:focus {
             border-color: #6366f1 !important;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, .12) !important;
+            outline: none;
         }
 
         ::-webkit-scrollbar {
@@ -65,17 +66,15 @@
 
 <body>
     <div id="root"></div>
-
     <script type="text/babel">
         const { useState, useRef, useEffect } = React;
 
-        // ─── CONFIG ────────────────────────────────────────────────────────────────
-        const MODEL = "gemini-2.0-flash";
-        const GEMINI_URL = (key) =>
-            `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`;
+        // ── CONFIG ─────────────────────────────────────────────────────────────────
+        const CLAUDE_MODEL = "claude-sonnet-4-20250514";
+        const LS_KEY = "marketmind_claude_key";
 
         const SYS = `You are an expert Indian stock market analyst specializing in NSE/BSE swing trading.
-Always use Google Search to get real-time data before answering. Provide:
+Always use web search to get real-time data before answering. Provide:
 - Current price, trend, and volume data
 - Technical analysis: RSI, MACD, Bollinger Bands, support/resistance levels, moving averages
 - Fundamental snapshot when relevant
@@ -84,28 +83,34 @@ Always use Google Search to get real-time data before answering. Provide:
 Use markdown with ## headers, **bold** for key numbers, and bullet points. Keep responses concise and actionable.
 End with: "⚠️ Educational analysis only — not SEBI-registered investment advice."`;
 
-        // ─── API CALL ───────────────────────────────────────────────────────────────
-        async function callGemini(apiKey, userPrompt) {
+        // ── CLAUDE API CALL ────────────────────────────────────────────────────────
+        async function callClaude(apiKey, userPrompt) {
             try {
-                const res = await fetch(GEMINI_URL(apiKey), {
+                const res = await fetch("https://api.anthropic.com/v1/messages", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-api-key": apiKey,
+                        "anthropic-version": "2023-06-01",
+                        "anthropic-dangerous-direct-browser-access": "true"
+                    },
                     body: JSON.stringify({
-                        systemInstruction: { parts: [{ text: SYS }] },
-                        contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-                        tools: [{ googleSearch: {} }],
-                        generationConfig: { maxOutputTokens: 1024 }
+                        model: CLAUDE_MODEL,
+                        max_tokens: 1000,
+                        system: SYS,
+                        messages: [{ role: "user", content: userPrompt }],
+                        tools: [{ type: "web_search_20250305", name: "web_search" }]
                     })
                 });
                 const d = await res.json();
                 if (d.error) return "⚠️ API Error: " + d.error.message;
-                return d.candidates?.[0]?.content?.parts?.[0]?.text || "No response received.";
+                return d.content?.filter(b => b.type === "text").map(b => b.text).join("\n") || "No response received.";
             } catch (e) {
                 return "⚠️ Network error: " + e.message;
             }
         }
 
-        // ─── MARKDOWN RENDERER ──────────────────────────────────────────────────────
+        // ── MARKDOWN RENDERER ──────────────────────────────────────────────────────
         function renderInline(text) {
             const parts = text.split(/(\*\*[^*]+\*\*)/g);
             return parts.map((p, i) =>
@@ -116,11 +121,10 @@ End with: "⚠️ Educational analysis only — not SEBI-registered investment a
         }
 
         function MD({ text }) {
-            const lines = (text || "").split("\n");
             return React.createElement("div", { style: { fontSize: 13, lineHeight: 1.8, color: "#1e293b" } },
-                lines.map((line, i) => {
-                    if (line.startsWith("# ")) return React.createElement("div", { key: i, style: { fontWeight: 800, fontSize: 17, color: "#1e293b", margin: "16px 0 6px" } }, line.slice(2));
-                    if (line.startsWith("## ")) return React.createElement("div", { key: i, style: { fontWeight: 700, fontSize: 15, color: "#1e293b", margin: "14px 0 4px" } }, line.slice(3));
+                (text || "").split("\n").map((line, i) => {
+                    if (line.startsWith("# ")) return React.createElement("div", { key: i, style: { fontWeight: 800, fontSize: 17, margin: "16px 0 6px" } }, line.slice(2));
+                    if (line.startsWith("## ")) return React.createElement("div", { key: i, style: { fontWeight: 700, fontSize: 15, margin: "14px 0 4px" } }, line.slice(3));
                     if (line.startsWith("### ")) return React.createElement("div", { key: i, style: { fontWeight: 700, fontSize: 13, color: "#374151", margin: "10px 0 2px" } }, line.slice(4));
                     if (line.startsWith("- ") || line.startsWith("* "))
                         return React.createElement("div", { key: i, style: { paddingLeft: 16, margin: "3px 0" } }, "• ", ...renderInline(line.slice(2)));
@@ -132,94 +136,63 @@ End with: "⚠️ Educational analysis only — not SEBI-registered investment a
             );
         }
 
-        // ─── CONSTANTS ──────────────────────────────────────────────────────────────
-        const C = {
-            indigo: "#6366f1", green: "#16a34a", red: "#dc2626",
-            slate: "#64748b", border: "#e2e8f0"
-        };
-
-        const SAMPLE_STOCKS = [
-            { id: 1, sym: "RELIANCE", name: "Reliance Industries", qty: 10, buy: 2850 },
-            { id: 2, sym: "TCS", name: "Tata Consultancy Services", qty: 5, buy: 3920 },
-            { id: 3, sym: "HDFCBANK", name: "HDFC Bank", qty: 15, buy: 1680 },
-        ];
-
-        const TABS = [
-            ["portfolio", "💼", "Portfolio"],
-            ["analyst", "🤖", "AI Analyst"],
-            ["analyzer", "🔍", "Analyzer"],
-            ["pulse", "📊", "Market Pulse"],
-            ["tips", "💡", "Trade Tips"],
-        ];
-
-        const QUICK_MSGS = [
-            "Nifty 50 outlook this week?",
-            "Best swing trade right now?",
-            "Should I hold TCS?",
-            "Analyse my full portfolio",
-        ];
-
-        const QUICK_SYMS = ["RELIANCE", "TCS", "INFY", "HDFCBANK", "TATAMOTORS", "AXISBANK", "WIPRO", "ICICIBANK"];
-
-        // ─── STYLES ─────────────────────────────────────────────────────────────────
+        // ── DESIGN TOKENS ─────────────────────────────────────────────────────────
+        const C = { indigo: "#6366f1", green: "#16a34a", slate: "#64748b", border: "#e2e8f0" };
         const S = {
             card: { background: "#fff", borderRadius: 14, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16, animation: "fadeIn .25s ease" },
             btn: (bg = C.indigo) => ({ background: bg, color: "#fff", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }),
             outBtn: { background: "none", border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, cursor: "pointer", color: C.slate },
-            inp: { border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none", width: "100%", background: "#fff", transition: "border-color .15s, box-shadow .15s" },
+            inp: { border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 12px", fontSize: 13, width: "100%", background: "#fff", transition: "border-color .15s, box-shadow .15s" },
             label: { fontSize: 11, fontWeight: 700, color: C.slate, marginBottom: 4, display: "block", textTransform: "uppercase", letterSpacing: 0.5 },
             chip: (bg, fg) => ({ background: bg, color: fg, fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, display: "inline-block" }),
             spin: { display: "inline-block", width: 14, height: 14, border: "2px solid #e2e8f0", borderTop: `2px solid ${C.indigo}`, borderRadius: "50%", animation: "spin .8s linear infinite" },
         };
 
-        // ─── API KEY MODAL ──────────────────────────────────────────────────────────
-        function ApiKeyModal({ onSave }) {
+        const TABS = [["portfolio", "💼", "Portfolio"], ["analyst", "🤖", "AI Analyst"], ["analyzer", "🔍", "Analyzer"], ["pulse", "📊", "Market Pulse"], ["tips", "💡", "Trade Tips"]];
+        const SAMPLE = [{ id: 1, sym: "RELIANCE", name: "Reliance Industries", qty: 10, buy: 2850 }, { id: 2, sym: "TCS", name: "Tata Consultancy Services", qty: 5, buy: 3920 }, { id: 3, sym: "HDFCBANK", name: "HDFC Bank", qty: 15, buy: 1680 }];
+        const QUICK_MSG = ["Nifty 50 outlook this week?", "Best swing trade right now?", "Should I hold TCS?", "Analyse my full portfolio"];
+        const QUICK_SYM = ["RELIANCE", "TCS", "INFY", "HDFCBANK", "TATAMOTORS", "AXISBANK", "WIPRO", "ICICIBANK"];
+
+        // ── API KEY SETUP MODAL ────────────────────────────────────────────────────
+        function SetupModal({ onSave }) {
             const [val, setVal] = useState("");
             const [show, setShow] = useState(false);
             return (
-                <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
-                    <div style={{ background: "#fff", borderRadius: 16, padding: 32, width: "100%", maxWidth: 440, boxShadow: "0 25px 50px rgba(0,0,0,.2)" }}>
-                        <div style={{ fontSize: 28, marginBottom: 8 }}>📈</div>
-                        <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 6 }}>MarketMind <span style={{ color: C.indigo }}>India</span></div>
-                        <div style={{ color: C.slate, fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>
-                            Enter your <strong>Google Gemini API key</strong> to get started. Your key stays in memory only — never stored or sent anywhere else.
+                <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.65)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
+                    <div style={{ background: "#fff", borderRadius: 18, padding: 36, width: "100%", maxWidth: 460, boxShadow: "0 30px 60px rgba(0,0,0,.2)" }}>
+                        <div style={{ fontSize: 30, marginBottom: 10 }}>📈</div>
+                        <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 6 }}>MarketMind <span style={{ color: C.indigo }}>India</span></div>
+                        <div style={{ color: C.slate, fontSize: 13, lineHeight: 1.7, marginBottom: 8 }}>
+                            Powered by <strong>Claude AI</strong> with live web search for real-time Indian market analysis.
                         </div>
-                        <label style={S.label}>Gemini API Key</label>
-                        <div style={{ position: "relative", marginBottom: 16 }}>
-                            <input
-                                style={{ ...S.inp, paddingRight: 44 }}
-                                type={show ? "text" : "password"}
-                                placeholder="AIza..."
-                                value={val}
-                                onChange={e => setVal(e.target.value)}
-                                onKeyDown={e => e.key === "Enter" && val.trim() && onSave(val.trim())}
-                            />
-                            <button onClick={() => setShow(s => !s)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.slate, fontSize: 16 }}>
-                                {show ? "🙈" : "👁️"}
-                            </button>
+                        <div style={{ background: "#f0fdf4", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#166534", marginBottom: 20 }}>
+                            🔒 Your API key is saved to <strong>this browser only</strong> (localStorage). It never leaves your device except to call Anthropic's API directly.
                         </div>
-                        <button style={{ ...S.btn(), width: "100%", padding: "11px 16px", fontSize: 14 }} onClick={() => val.trim() && onSave(val.trim())}>
-                            Launch App →
+                        <label style={S.label}>Anthropic API Key</label>
+                        <div style={{ position: "relative", marginBottom: 8 }}>
+                            <input style={{ ...S.inp, paddingRight: 44 }} type={show ? "text" : "password"} placeholder="sk-ant-..." value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => e.key === "Enter" && val.startsWith("sk-") && onSave(val.trim())} />
+                            <button onClick={() => setShow(s => !s)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>{show ? "🙈" : "👁️"}</button>
+                        </div>
+                        <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 20 }}>
+                            Get your free key at{" "}
+                            <a href="https://console.anthropic.com/keys" target="_blank" rel="noreferrer" style={{ color: C.indigo }}>console.anthropic.com/keys</a>
+                        </div>
+                        <button style={{ ...S.btn(), width: "100%", padding: "12px 16px", fontSize: 14 }} onClick={() => val.trim() && onSave(val.trim())}>
+                            Save & Launch App →
                         </button>
-                        <div style={{ marginTop: 14, fontSize: 11, color: "#94a3b8", textAlign: "center" }}>
-                            Get a free key at{" "}
-                            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={{ color: C.indigo }}>
-                                aistudio.google.com
-                            </a>
-                        </div>
                     </div>
                 </div>
             );
         }
 
-        // ─── MAIN APP ───────────────────────────────────────────────────────────────
+        // ── MAIN APP ───────────────────────────────────────────────────────────────
         function App() {
-            const [apiKey, setApiKey] = useState("");
+            const [apiKey, setApiKey] = useState(() => localStorage.getItem(LS_KEY) || "");
             const [tab, setTab] = useState("portfolio");
-            const [stocks, setStocks] = useState(SAMPLE_STOCKS);
+            const [stocks, setStocks] = useState(SAMPLE);
             const [form, setForm] = useState({ sym: "", name: "", qty: "", buy: "" });
             const [showAdd, setShowAdd] = useState(false);
-            const [msgs, setMsgs] = useState([{ role: "ai", text: "👋 Namaste! I'm your Indian market AI analyst. Ask me anything about NSE/BSE stocks, swing trades, or your portfolio. I'll search for live data before answering!" }]);
+            const [msgs, setMsgs] = useState([{ role: "ai", text: "👋 Namaste! I'm your Indian market AI analyst powered by Claude. Ask me anything about NSE/BSE stocks, swing trades, or your portfolio. I search for live data before answering!" }]);
             const [chatIn, setChatIn] = useState("");
             const [stockQ, setStockQ] = useState("");
             const [stockRes, setStockRes] = useState("");
@@ -230,16 +203,16 @@ End with: "⚠️ Educational analysis only — not SEBI-registered investment a
 
             const today = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
             const portfolio = stocks.map(s => `${s.sym} (${s.name}): ${s.qty} shares @ ₹${s.buy}`).join("; ");
-            const invested = stocks.reduce((sum, s) => sum + s.qty * s.buy, 0);
+            const invested = stocks.reduce((s, st) => s + st.qty * st.buy, 0);
 
+            const saveKey = key => { localStorage.setItem(LS_KEY, key); setApiKey(key); };
+            const clearKey = () => { localStorage.removeItem(LS_KEY); setApiKey(""); };
             const setB = (k, v) => setBusy(b => ({ ...b, [k]: v }));
-            const ask = (prompt) => callGemini(apiKey, prompt);
+            const ask = prompt => callClaude(apiKey, prompt);
 
-            // Chat
             const sendChat = async () => {
                 if (!chatIn.trim() || busy.chat) return;
-                const q = chatIn.trim();
-                setChatIn("");
+                const q = chatIn.trim(); setChatIn("");
                 const history = msgs.slice(-6).map(m => `${m.role === "user" ? "User" : "AI"}: ${m.text}`).join("\n");
                 setMsgs(p => [...p, { role: "user", text: q }]);
                 setB("chat", true);
@@ -249,37 +222,31 @@ End with: "⚠️ Educational analysis only — not SEBI-registered investment a
                 setTimeout(() => msgEnd.current?.scrollIntoView({ behavior: "smooth" }), 100);
             };
 
-            // Stock analyzer
             const analyzeStock = async () => {
                 if (!stockQ.trim() || busy.stock) return;
                 setB("stock", true); setStockRes("");
-                const res = await ask(`Analyze ${stockQ.toUpperCase()} (NSE/BSE) for swing trading as of ${today}. Search for current price, RSI, MACD, support/resistance levels, recent news, FII data. Give a full swing trade report: trend, entry zone, target, stop-loss, risk level, and time horizon.`);
+                const res = await ask(`Analyze ${stockQ.toUpperCase()} (NSE/BSE) for swing trading as of ${today}. Search for current price, RSI, MACD, support/resistance, recent news, FII data. Full swing trade report: trend, entry zone, target, stop-loss, risk level, time horizon.`);
                 setStockRes(res); setB("stock", false);
             };
 
-            // Market pulse
             const loadPulse = async () => {
                 setB("pulse", true); setPulse("");
-                const res = await ask(`Indian market pulse for ${today}: Search for 1) Nifty 50 and Sensex levels & % change 2) Top 5 gainers and losers 3) Sector rotation (hot/cold sectors) 4) FII & DII activity 5) Key macro or RBI news 6) Swing trading outlook for next 3-5 days.`);
+                const res = await ask(`Indian market pulse for ${today}: 1) Nifty 50 and Sensex levels & % change 2) Top 5 gainers and losers 3) Sector rotation (hot/cold) 4) FII & DII activity 5) Key macro or RBI news 6) Swing trading outlook for next 3-5 days.`);
                 setPulse(res); setB("pulse", false);
             };
 
-            // Trade tips
             const loadTips = async () => {
                 setB("tips", true); setTips("");
-                const res = await ask(`My portfolio as of ${today}: ${portfolio}.\n\nSearch live market data and give: 1) Portfolio health check — which holdings are technically strong vs weak 2) Top 3 swing trade opportunities in Indian markets right now with entry, target, stop-loss 3) Urgent alerts for my holdings (stop-loss at risk, target near, trend reversal) 4) This week's swing strategy given current Nifty trend. Be specific with price levels.`);
+                const res = await ask(`My portfolio as of ${today}: ${portfolio}.\n\nSearch live market data and give: 1) Portfolio health check — strong vs weak holdings 2) Top 3 swing trade opportunities right now with entry, target, stop-loss 3) Urgent alerts for my holdings (stop-loss at risk, target near, trend reversal) 4) This week's swing strategy given Nifty trend. Be specific with price levels.`);
                 setTips(res); setB("tips", false);
             };
 
-            // Add stock
             const addStock = () => {
                 if (!form.sym || !form.qty || !form.buy) return;
                 setStocks(p => [...p, { id: Date.now(), sym: form.sym.toUpperCase(), name: form.name || form.sym.toUpperCase(), qty: +form.qty, buy: +form.buy }]);
-                setForm({ sym: "", name: "", qty: "", buy: "" });
-                setShowAdd(false);
+                setForm({ sym: "", name: "", qty: "", buy: "" }); setShowAdd(false);
             };
 
-            // CSV import
             const handleCSV = e => {
                 const file = e.target.files[0]; if (!file) return;
                 const r = new FileReader();
@@ -294,21 +261,20 @@ End with: "⚠️ Educational analysis only — not SEBI-registered investment a
                     if (parsed.length) setStocks(p => [...p, ...parsed]);
                     else alert("Could not parse CSV.\nExpected columns: Symbol, Name, Quantity, Buy Price");
                 };
-                r.readAsText(file);
-                e.target.value = "";
+                r.readAsText(file); e.target.value = "";
             };
 
-            // ── RENDER ──────────────────────────────────────────────────────────────
+            // ── RENDER ────────────────────────────────────────────────────────────────
             return (
                 <div>
-                    {!apiKey && <ApiKeyModal onSave={setApiKey} />}
+                    {!apiKey && <SetupModal onSave={saveKey} />}
 
-                    {/* ── HEADER */}
-                    <div style={{ background: "#fff", borderBottom: `1px solid ${C.border}`, padding: "0 20px", display: "flex", alignItems: "center", gap: 16, position: "sticky", top: 0, zIndex: 10, boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
+                    {/* HEADER */}
+                    <div style={{ background: "#fff", borderBottom: `1px solid ${C.border}`, padding: "0 20px", display: "flex", alignItems: "center", gap: 16, position: "sticky", top: 0, zIndex: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "14px 0", fontWeight: 800, fontSize: 16, whiteSpace: "nowrap" }}>
                             <span style={{ fontSize: 22 }}>📈</span>
                             Market<span style={{ color: C.indigo }}>Mind</span>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8" }}>India</span>
+                            <span style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", background: "#f1f5f9", padding: "2px 7px", borderRadius: 20 }}>Claude AI</span>
                         </div>
                         <div style={{ display: "flex", overflowX: "auto", flex: 1 }}>
                             {TABS.map(([id, icon, label]) => (
@@ -317,18 +283,17 @@ End with: "⚠️ Educational analysis only — not SEBI-registered investment a
                                 </button>
                             ))}
                         </div>
-                        <button onClick={() => setApiKey("")} title="Change API Key" style={{ ...S.btn("#f1f5f9"), color: C.slate, fontSize: 18, padding: "6px 10px" }}>🔑</button>
+                        <button onClick={clearKey} title="Change API Key" style={{ ...S.btn("#f1f5f9"), color: C.slate, padding: "7px 12px", fontSize: 13 }}>🔑 Key</button>
                     </div>
 
-                    {/* ── BODY */}
                     <div style={{ maxWidth: 900, margin: "0 auto", padding: "20px 16px" }}>
 
-                        {/* ────────────────── PORTFOLIO ────────────────── */}
+                        {/* ── PORTFOLIO ─────────────────────────────────────── */}
                         {tab === "portfolio" && (
                             <div>
-                                <div style={{ ...S.card, background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)", border: "none", display: "flex", alignItems: "center", gap: 24 }}>
+                                <div style={{ ...S.card, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none", display: "flex", alignItems: "center", gap: 24 }}>
                                     <div>
-                                        <div style={{ color: "rgba(255,255,255,.7)", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Total Invested</div>
+                                        <div style={{ color: "rgba(255,255,255,.7)", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: .5 }}>Total Invested</div>
                                         <div style={{ color: "#fff", fontSize: 30, fontWeight: 800, marginTop: 4 }}>₹{invested.toLocaleString("en-IN")}</div>
                                         <div style={{ color: "rgba(255,255,255,.6)", fontSize: 12, marginTop: 4 }}>{stocks.length} holdings</div>
                                     </div>
@@ -368,16 +333,11 @@ End with: "⚠️ Educational analysis only — not SEBI-registered investment a
                                     )}
 
                                     {stocks.length === 0
-                                        ? <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
-                                            <div style={{ fontSize: 36 }}>📭</div>
-                                            <div style={{ marginTop: 10 }}>No holdings yet. Add stocks or import your Groww CSV.</div>
-                                        </div>
+                                        ? <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}><div style={{ fontSize: 36 }}>📭</div><div style={{ marginTop: 10 }}>No holdings yet. Add stocks or import your Groww CSV.</div></div>
                                         : <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                            <thead>
-                                                <tr>{["Symbol", "Company", "Qty", "Buy Price", "Invested", ""].map(h => (
-                                                    <th key={h} style={{ textAlign: "left", fontSize: 11, fontWeight: 700, color: C.slate, padding: "6px 10px", textTransform: "uppercase", letterSpacing: 0.3, borderBottom: `2px solid #f1f5f9` }}>{h}</th>
-                                                ))}</tr>
-                                            </thead>
+                                            <thead><tr>{["Symbol", "Company", "Qty", "Buy Price", "Invested", ""].map(h => (
+                                                <th key={h} style={{ textAlign: "left", fontSize: 11, fontWeight: 700, color: C.slate, padding: "6px 10px", textTransform: "uppercase", letterSpacing: .3, borderBottom: "2px solid #f1f5f9" }}>{h}</th>
+                                            ))}</tr></thead>
                                             <tbody>
                                                 {stocks.map(s => (
                                                     <tr key={s.id} style={{ borderTop: "1px solid #f8fafc" }}>
@@ -386,15 +346,12 @@ End with: "⚠️ Educational analysis only — not SEBI-registered investment a
                                                         <td style={{ padding: "13px 10px", fontSize: 13 }}>{s.qty}</td>
                                                         <td style={{ padding: "13px 10px", fontSize: 13 }}>₹{s.buy.toLocaleString("en-IN")}</td>
                                                         <td style={{ padding: "13px 10px", fontSize: 13, fontWeight: 700 }}>₹{(s.qty * s.buy).toLocaleString("en-IN")}</td>
-                                                        <td style={{ padding: "13px 10px" }}>
-                                                            <button onClick={() => setStocks(p => p.filter(x => x.id !== s.id))} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>🗑️</button>
-                                                        </td>
+                                                        <td style={{ padding: "13px 10px" }}><button onClick={() => setStocks(p => p.filter(x => x.id !== s.id))} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>🗑️</button></td>
                                                     </tr>
                                                 ))}
                                             </tbody>
                                         </table>
                                     }
-
                                     <div style={{ marginTop: 14, padding: "10px 14px", background: "#f0fdf4", borderRadius: 8, fontSize: 12, color: "#166534" }}>
                                         💡 <strong>Tip:</strong> Export from Groww → Profile → Reports → P&L Statement → download CSV → Import here.
                                     </div>
@@ -402,7 +359,7 @@ End with: "⚠️ Educational analysis only — not SEBI-registered investment a
                             </div>
                         )}
 
-                        {/* ────────────────── AI ANALYST ────────────────── */}
+                        {/* ── AI ANALYST ────────────────────────────────────── */}
                         {tab === "analyst" && (
                             <div style={S.card}>
                                 <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14 }}>🤖 AI Market Analyst</div>
@@ -422,14 +379,14 @@ End with: "⚠️ Educational analysis only — not SEBI-registered investment a
                                     <button style={S.btn()} onClick={sendChat} disabled={busy.chat}>Send ↵</button>
                                 </div>
                                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                                    {QUICK_MSGS.map(q => (
+                                    {QUICK_MSG.map(q => (
                                         <button key={q} onClick={() => setChatIn(q)} style={{ background: "#f1f5f9", border: "none", borderRadius: 20, padding: "5px 12px", fontSize: 12, cursor: "pointer", color: "#475569" }}>{q}</button>
                                     ))}
                                 </div>
                             </div>
                         )}
 
-                        {/* ────────────────── STOCK ANALYZER ────────────────── */}
+                        {/* ── STOCK ANALYZER ────────────────────────────────── */}
                         {tab === "analyzer" && (
                             <div>
                                 <div style={S.card}>
@@ -439,44 +396,30 @@ End with: "⚠️ Educational analysis only — not SEBI-registered investment a
                                         <button style={S.btn()} onClick={analyzeStock} disabled={busy.stock}>{busy.stock ? "Analyzing…" : "Analyze"}</button>
                                     </div>
                                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                                        {QUICK_SYMS.map(sym => (
+                                        {QUICK_SYM.map(sym => (
                                             <button key={sym} onClick={() => setStockQ(sym)} style={{ background: "#f1f5f9", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 12, cursor: "pointer", color: "#475569", fontWeight: 500 }}>{sym}</button>
                                         ))}
                                     </div>
                                 </div>
-                                {busy.stock && (
-                                    <div style={{ ...S.card, textAlign: "center", padding: 48 }}>
-                                        <div style={{ fontSize: 36 }}>🔄</div>
-                                        <div style={{ marginTop: 10, fontWeight: 600 }}>Fetching live data for {stockQ.toUpperCase()}…</div>
-                                        <div style={{ color: C.slate, fontSize: 12, marginTop: 4 }}>Searching news, technicals & fundamentals</div>
-                                    </div>
-                                )}
-                                {stockRes && !busy.stock && (
-                                    <div style={S.card}>{React.createElement(MD, { text: stockRes })}</div>
-                                )}
+                                {busy.stock && <div style={{ ...S.card, textAlign: "center", padding: 48 }}><div style={{ fontSize: 36 }}>🔄</div><div style={{ marginTop: 10, fontWeight: 600 }}>Fetching live data for {stockQ.toUpperCase()}…</div><div style={{ color: C.slate, fontSize: 12, marginTop: 4 }}>Searching news, technicals & fundamentals</div></div>}
+                                {stockRes && !busy.stock && <div style={S.card}>{React.createElement(MD, { text: stockRes })}</div>}
                             </div>
                         )}
 
-                        {/* ────────────────── MARKET PULSE ────────────────── */}
+                        {/* ── MARKET PULSE ──────────────────────────────────── */}
                         {tab === "pulse" && (
                             <div style={S.card}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                                     <span style={{ fontWeight: 700, fontSize: 15 }}>📊 Indian Market Pulse — {today}</span>
                                     <button style={S.btn()} onClick={loadPulse} disabled={busy.pulse}>{busy.pulse ? "Loading…" : "🔄 Refresh"}</button>
                                 </div>
-                                {!pulse && !busy.pulse && (
-                                    <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
-                                        <div style={{ fontSize: 36 }}>🌐</div>
-                                        <div style={{ marginTop: 10 }}>Click Refresh to fetch today's live market overview</div>
-                                        <div style={{ fontSize: 12, marginTop: 6 }}>Nifty 50, Sensex, gainers, losers, sectors & FII data</div>
-                                    </div>
-                                )}
+                                {!pulse && !busy.pulse && <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}><div style={{ fontSize: 36 }}>🌐</div><div style={{ marginTop: 10 }}>Click Refresh to fetch today's live market overview</div><div style={{ fontSize: 12, marginTop: 6 }}>Nifty 50, Sensex, gainers, losers, sectors & FII data</div></div>}
                                 {busy.pulse && <div style={{ textAlign: "center", padding: 48, color: C.slate }}><div style={{ fontSize: 36 }}>📡</div><div style={{ marginTop: 10 }}>Fetching live market data…</div></div>}
                                 {pulse && React.createElement(MD, { text: pulse })}
                             </div>
                         )}
 
-                        {/* ────────────────── TRADE TIPS ────────────────── */}
+                        {/* ── TRADE TIPS ────────────────────────────────────── */}
                         {tab === "tips" && (
                             <div style={S.card}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -484,21 +427,12 @@ End with: "⚠️ Educational analysis only — not SEBI-registered investment a
                                     <button style={S.btn(C.green)} onClick={loadTips} disabled={busy.tips}>{busy.tips ? "Analyzing…" : "✨ Get Tips"}</button>
                                 </div>
                                 <div style={{ background: "#f0fdf4", borderRadius: 8, padding: 12, fontSize: 13, color: "#166534", marginBottom: 14 }}>
-                                    🎯 AI will analyze your <strong>{stocks.length} holdings</strong> + live market to give personalized swing trade tips with entry, target & stop-loss.
+                                    🎯 Claude will analyze your <strong>{stocks.length} holdings</strong> + live market to give personalised swing trade tips with entry, target & stop-loss.
                                 </div>
-                                {!tips && !busy.tips && (
-                                    <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
-                                        <div style={{ fontSize: 36 }}>🤖</div>
-                                        <div style={{ marginTop: 10 }}>Click "Get Tips" to receive AI-powered swing trade recommendations</div>
-                                    </div>
-                                )}
+                                {!tips && !busy.tips && <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}><div style={{ fontSize: 36 }}>🤖</div><div style={{ marginTop: 10 }}>Click "Get Tips" to receive AI-powered swing trade recommendations</div></div>}
                                 {busy.tips && <div style={{ textAlign: "center", padding: 48, color: C.slate }}><div style={{ fontSize: 36 }}>🧠</div><div style={{ marginTop: 10 }}>Analyzing your portfolio + live market conditions…</div></div>}
                                 {tips && React.createElement(MD, { text: tips })}
-                                {tips && (
-                                    <div style={{ marginTop: 16, padding: "10px 14px", background: "#fef3c7", borderRadius: 8, fontSize: 12, color: "#92400e" }}>
-                                        ⚠️ AI-generated tips for educational purposes only. Not SEBI-registered investment advice. Always use your own judgement before trading.
-                                    </div>
-                                )}
+                                {tips && <div style={{ marginTop: 16, padding: "10px 14px", background: "#fef3c7", borderRadius: 8, fontSize: 12, color: "#92400e" }}>⚠️ AI-generated tips for educational purposes only. Not SEBI-registered investment advice. Always use your own judgement before trading.</div>}
                             </div>
                         )}
 
