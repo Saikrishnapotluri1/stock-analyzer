@@ -70,11 +70,11 @@
         const { useState, useRef, useEffect } = React;
 
         // ── CONFIG ─────────────────────────────────────────────────────────────────
-        const CLAUDE_MODEL = "claude-sonnet-4-20250514";
-        const LS_KEY = "marketmind_claude_key";
+        const GEMINI_MODEL = "gemini-2.0-flash";
+        const LS_KEY = "marketmind_gemini_key";
 
         const SYS = `You are an expert Indian stock market analyst specializing in NSE/BSE swing trading.
-Always use web search to get real-time data before answering. Provide:
+Always use Google Search to get real-time data before answering. Provide:
 - Current price, trend, and volume data
 - Technical analysis: RSI, MACD, Bollinger Bands, support/resistance levels, moving averages
 - Fundamental snapshot when relevant
@@ -83,28 +83,25 @@ Always use web search to get real-time data before answering. Provide:
 Use markdown with ## headers, **bold** for key numbers, and bullet points. Keep responses concise and actionable.
 End with: "⚠️ Educational analysis only — not SEBI-registered investment advice."`;
 
-        // ── CLAUDE API CALL ────────────────────────────────────────────────────────
+        // ── GEMINI API CALL ────────────────────────────────────────────────────────
         async function callClaude(apiKey, userPrompt) {
             try {
-                const res = await fetch("https://api.anthropic.com/v1/messages", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "x-api-key": apiKey,
-                        "anthropic-version": "2023-06-01",
-                        "anthropic-dangerous-direct-browser-access": "true"
-                    },
-                    body: JSON.stringify({
-                        model: CLAUDE_MODEL,
-                        max_tokens: 1000,
-                        system: SYS,
-                        messages: [{ role: "user", content: userPrompt }],
-                        tools: [{ type: "web_search_20250305", name: "web_search" }]
-                    })
-                });
+                const res = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            systemInstruction: { parts: [{ text: SYS }] },
+                            contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+                            tools: [{ googleSearch: {} }],
+                            generationConfig: { maxOutputTokens: 1000 }
+                        })
+                    }
+                );
                 const d = await res.json();
                 if (d.error) return "⚠️ API Error: " + d.error.message;
-                return d.content?.filter(b => b.type === "text").map(b => b.text).join("\n") || "No response received.";
+                return d.candidates?.[0]?.content?.parts?.[0]?.text || "No response received.";
             } catch (e) {
                 return "⚠️ Network error: " + e.message;
             }
@@ -163,19 +160,19 @@ End with: "⚠️ Educational analysis only — not SEBI-registered investment a
                         <div style={{ fontSize: 30, marginBottom: 10 }}>📈</div>
                         <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 6 }}>MarketMind <span style={{ color: C.indigo }}>India</span></div>
                         <div style={{ color: C.slate, fontSize: 13, lineHeight: 1.7, marginBottom: 8 }}>
-                            Powered by <strong>Claude AI</strong> with live web search for real-time Indian market analysis.
+                            Powered by <strong>Gemini AI</strong> with live Google Search for real-time Indian market analysis.
                         </div>
                         <div style={{ background: "#f0fdf4", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#166534", marginBottom: 20 }}>
-                            🔒 Your API key is saved to <strong>this browser only</strong> (localStorage). It never leaves your device except to call Anthropic's API directly.
+                            🔒 Your API key is saved to <strong>this browser only</strong> (localStorage). It never leaves your device except to call Google's API directly.
                         </div>
-                        <label style={S.label}>Anthropic API Key</label>
+                        <label style={S.label}>Google Gemini API Key</label>
                         <div style={{ position: "relative", marginBottom: 8 }}>
-                            <input style={{ ...S.inp, paddingRight: 44 }} type={show ? "text" : "password"} placeholder="sk-ant-..." value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => e.key === "Enter" && val.startsWith("sk-") && onSave(val.trim())} />
+                            <input style={{ ...S.inp, paddingRight: 44 }} type={show ? "text" : "password"} placeholder="AIza..." value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => e.key === "Enter" && val.trim() && onSave(val.trim())} />
                             <button onClick={() => setShow(s => !s)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>{show ? "🙈" : "👁️"}</button>
                         </div>
                         <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 20 }}>
-                            Get your free key at{" "}
-                            <a href="https://console.anthropic.com/keys" target="_blank" rel="noreferrer" style={{ color: C.indigo }}>console.anthropic.com/keys</a>
+                            Get your <strong>free</strong> key (1,500 req/day) at{" "}
+                            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={{ color: C.indigo }}>aistudio.google.com/app/apikey</a>
                         </div>
                         <button style={{ ...S.btn(), width: "100%", padding: "12px 16px", fontSize: 14 }} onClick={() => val.trim() && onSave(val.trim())}>
                             Save & Launch App →
@@ -274,7 +271,7 @@ End with: "⚠️ Educational analysis only — not SEBI-registered investment a
                         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "14px 0", fontWeight: 800, fontSize: 16, whiteSpace: "nowrap" }}>
                             <span style={{ fontSize: 22 }}>📈</span>
                             Market<span style={{ color: C.indigo }}>Mind</span>
-                            <span style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", background: "#f1f5f9", padding: "2px 7px", borderRadius: 20 }}>Claude AI</span>
+                            <span style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", background: "#f1f5f9", padding: "2px 7px", borderRadius: 20 }}>Gemini AI</span>
                         </div>
                         <div style={{ display: "flex", overflowX: "auto", flex: 1 }}>
                             {TABS.map(([id, icon, label]) => (
